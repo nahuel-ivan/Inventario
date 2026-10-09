@@ -1,0 +1,1878 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de Inventario</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --azul: #17365d;
+    --azul2: #24558a;
+    --fondo: #f2f5f9;
+    --borde: #dce3eb;
+    --texto: #253247;
+    --verde: #198754;
+    --amarillo: #f5c542;
+    --rojo: #dc3545;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: var(--fondo);
+    color: var(--texto);
+    min-height: 100vh;
+}
+
+header {
+    background: var(--azul);
+    color: white;
+    padding: 22px 25px;
+    box-shadow: 0 3px 8px #0002;
+}
+
+.header-contenido {
+    max-width: 1500px;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+header h1 {
+    font-size: 25px;
+    margin-bottom: 5px;
+}
+
+header p {
+    font-size: 13px;
+    opacity: .85;
+}
+
+main {
+    max-width: 1500px;
+    margin: 22px auto;
+    padding: 0 18px 40px;
+}
+
+.panel {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px #0000000a;
+    border: 1px solid var(--borde);
+}
+
+.panel h2 {
+    font-size: 19px;
+    margin-bottom: 16px;
+    color: var(--azul);
+}
+
+.panel h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+}
+
+.fila {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+}
+
+.campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 150px;
+    flex: 1;
+}
+
+.campo label {
+    font-size: 12px;
+    font-weight: bold;
+    color: #536176;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cbd4df;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    color: var(--texto);
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: 2px solid #8bb8ed;
+    border-color: var(--azul2);
+}
+
+button {
+    border: 0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px;
+    transition: .15s;
+}
+
+button:hover {
+    filter: brightness(.94);
+}
+
+button:disabled {
+    opacity: .5;
+    cursor: not-allowed;
+}
+
+.btn-azul {
+    background: var(--azul2);
+    color: white;
+}
+
+.btn-verde {
+    background: var(--verde);
+    color: white;
+}
+
+.btn-rojo {
+    background: var(--rojo);
+    color: white;
+}
+
+.btn-gris {
+    background: #e6ebf1;
+    color: #26364b;
+}
+
+.btn-amarillo {
+    background: var(--amarillo);
+    color: #342b0d;
+}
+
+.btn-pequeno {
+    padding: 7px 9px;
+    font-size: 12px;
+    margin: 2px;
+}
+
+.pestanas {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.pestana {
+    background: #e0e7ef;
+    color: #34445a;
+    padding: 13px 18px;
+    border-radius: 7px;
+}
+
+.pestana.activa {
+    background: var(--azul);
+    color: white;
+}
+
+.vista {
+    display: none;
+}
+
+.vista.activa {
+    display: block;
+}
+
+.kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+.kpi {
+    padding: 18px;
+    background: white;
+    border: 1px solid var(--borde);
+    border-radius: 9px;
+}
+
+.kpi .titulo {
+    color: #68778b;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+.kpi .numero {
+    color: var(--azul);
+    font-size: 27px;
+    font-weight: bold;
+    overflow-wrap: anywhere;
+}
+
+.tabla-contenedor {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--borde);
+    border-radius: 7px;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    background: white;
+    font-size: 13px;
+}
+
+th, td {
+    border-bottom: 1px solid #e5eaf0;
+    padding: 11px 10px;
+    text-align: left;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+th {
+    background: #edf2f7;
+    color: #34445a;
+    font-size: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+tbody tr:hover {
+    background: #f7faff;
+}
+
+td input {
+    min-width: 90px;
+    padding: 8px;
+}
+
+.estado {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 11px;
+}
+
+.estado-ok {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.estado-pendiente {
+    background: #fff0bd;
+    color: #705400;
+}
+
+.estado-revisar {
+    background: #f8d7da;
+    color: #842029;
+}
+
+.estado-abierto {
+    background: #cfe2ff;
+    color: #084298;
+}
+
+.estado-cerrado {
+    background: #e2e3e5;
+    color: #41464b;
+}
+
+.mensaje {
+    display: none;
+    margin-bottom: 15px;
+    padding: 12px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.mensaje.visible {
+    display: block;
+}
+
+.mensaje.exito {
+    background: #d1e7dd;
+    color: #0f5132;
+}
+
+.mensaje.error {
+    background: #f8d7da;
+    color: #842029;
+}
+
+.mensaje.info {
+    background: #cfe2ff;
+    color: #084298;
+}
+
+.separador {
+    height: 1px;
+    background: var(--borde);
+    margin: 18px 0;
+}
+
+.texto-ayuda {
+    color: #69788b;
+    font-size: 12px;
+    line-height: 1.6;
+    margin-top: 10px;
+}
+
+.texto-vacio {
+    text-align: center;
+    color: #6c7888;
+    padding: 25px;
+}
+
+.pie-tabla {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: #69788b;
+}
+
+.oculto {
+    display: none !important;
+}
+
+#estadoConexion {
+    font-size: 12px;
+    color: #dce8f5;
+}
+
+@media (max-width: 800px) {
+    .kpis {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+    }
+
+    header h1 {
+        font-size: 21px;
+    }
+
+    main {
+        padding: 0 10px 25px;
+    }
+
+    .panel {
+        padding: 14px;
+    }
+}
+
+@media (max-width: 430px) {
+    .kpis {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+
+    .kpi {
+        padding: 12px;
+    }
+
+    .kpi .numero {
+        font-size: 22px;
+    }
+
+    .pestana {
+        flex: 1;
+        padding: 11px 8px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="header-contenido">
+        <div>
+            <h1>📦 Sistema de Inventario</h1>
+            <p>Control de piezas, relevamientos y diferencias de stock</p>
+        </div>
+        <div id="estadoConexion">Conectando con la base de datos...</div>
+    </div>
+</header>
+
+<main>
+
+    <div id="mensaje" class="mensaje"></div>
+
+    <section class="panel">
+        <h2>Inventario de trabajo</h2>
+
+        <div class="fila">
+            <div class="campo" style="min-width:250px; flex:2;">
+                <label for="inventarioSelect">Inventario seleccionado</label>
+                <select id="inventarioSelect">
+                    <option value="">Cargando inventarios...</option>
+                </select>
+            </div>
+
+            <button class="btn-verde" onclick="nuevoInventario()">
+                + Nuevo inventario
+            </button>
+
+            <button class="btn-gris" onclick="verInventarios()">
+                Ver inventarios
+            </button>
+        </div>
+
+        <p class="texto-ayuda">
+            Los conteos se guardan en el inventario seleccionado.
+            Si importás un CSV nuevo, se eliminarán los inventarios y conteos anteriores.
+        </p>
+    </section>
+
+    <nav class="pestanas">
+        <button class="pestana activa" data-vista="relevamiento"
+            onclick="mostrarVista('relevamiento')">
+            Relevamiento
+        </button>
+
+        <button class="pestana" data-vista="resumen"
+            onclick="mostrarVista('resumen')">
+            Resumen del relevamiento
+        </button>
+
+        <button class="pestana" data-vista="importar"
+            onclick="mostrarVista('importar')">
+            Importar CSV
+        </button>
+    </nav>
+
+    <!-- VISTA RELEVAMIENTO -->
+    <section id="vista-relevamiento" class="vista activa">
+
+        <div class="kpis">
+            <div class="kpi">
+                <div class="titulo">Piezas en la base</div>
+                <div class="numero" id="kpiPiezas">0</div>
+            </div>
+            <div class="kpi">
+                <div class="titulo">CIM relevados</div>
+                <div class="numero" id="kpiContados">0</div>
+            </div>
+            <div class="kpi">
+                <div class="titulo">Pendientes</div>
+                <div class="numero" id="kpiPendientes">0</div>
+            </div>
+            <div class="kpi">
+                <div class="titulo">Con diferencias</div>
+                <div class="numero" id="kpiDiferencias">0</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Buscar piezas para el relevamiento</h2>
+
+            <div class="fila">
+                <div class="campo">
+                    <label for="buscarRelevamiento">Buscar CIM, diseño o descripción</label>
+                    <input id="buscarRelevamiento" placeholder="Escribí para buscar..."
+                        oninput="renderRelevamiento()">
+                </div>
+
+                <div class="campo">
+                    <label for="localRelevamiento">Local</label>
+                    <input id="localRelevamiento" list="listaLocales"
+                        placeholder="Todos los locales" oninput="renderRelevamiento()">
+                    <datalist id="listaLocales"></datalist>
+                </div>
+
+                <div class="campo">
+                    <label for="estadoRelevamiento">Estado</label>
+                    <select id="estadoRelevamiento" onchange="renderRelevamiento()">
+                        <option value="">Todos</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="contado">Contado</option>
+                        <option value="revisar">Con diferencia</option>
+                    </select>
+                </div>
+
+                <button class="btn-gris" onclick="limpiarFiltrosRelevamiento()">
+                    Limpiar filtros
+                </button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Piezas por contar</h2>
+
+            <div class="tabla-contenedor">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>CIM</th>
+                            <th>Diseño</th>
+                            <th>Descripción</th>
+                            <th>Local</th>
+                            <th>Stock sistema</th>
+                            <th>Cantidad física</th>
+                            <th>Diferencia</th>
+                            <th>Estado</th>
+                            <th>Observaciones</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaRelevamiento">
+                        <tr><td colspan="10" class="texto-vacio">Cargando datos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pie-tabla">
+                <span id="cantidadFilasRelevamiento">0 piezas</span>
+                <span>La diferencia se calcula como cantidad física menos stock del sistema.</span>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- VISTA RESUMEN -->
+    <section id="vista-resumen" class="vista">
+
+        <div class="kpis">
+            <div class="kpi">
+                <div class="titulo">Total de piezas</div>
+                <div class="numero" id="resTotal">0</div>
+            </div>
+            <div class="kpi">
+                <div class="titulo">Contadas</div>
+                <div class="numero" id="resContadas">0</div>
+            </div>
+            <div class="kpi">
+                <div class="titulo">Pendientes</div>
+                <div class="numero" id="resPendientes">0</div>
+            </div>
+            <div class="kpi">
+                <div class="titulo">Con diferencias</div>
+                <div class="numero" id="resDiferencias">0</div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Filtros del resumen</h2>
+
+            <div class="fila">
+                <div class="campo">
+                    <label for="buscarResumen">Buscar CIM, diseño o descripción</label>
+                    <input id="buscarResumen" placeholder="Buscar..."
+                        oninput="renderResumen()">
+                </div>
+
+                <div class="campo">
+                    <label for="localResumen">Local</label>
+                    <input id="localResumen" list="listaLocalesResumen"
+                        placeholder="Todos los locales" oninput="renderResumen()">
+                    <datalist id="listaLocalesResumen"></datalist>
+                </div>
+
+                <div class="campo">
+                    <label for="estadoResumen">Estado</label>
+                    <select id="estadoResumen" onchange="renderResumen()">
+                        <option value="">Todos</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="contado">Contado sin diferencias</option>
+                        <option value="revisar">Con diferencias</option>
+                    </select>
+                </div>
+
+                <button class="btn-gris" onclick="limpiarFiltrosResumen()">
+                    Limpiar filtros
+                </button>
+
+                <button class="btn-verde" onclick="exportarResumen()">
+                    Exportar CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Detalle del inventario seleccionado</h2>
+
+            <div class="tabla-contenedor">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>CIM</th>
+                            <th>Diseño</th>
+                            <th>Descripción</th>
+                            <th>Área</th>
+                            <th>Local</th>
+                            <th>Stock sistema</th>
+                            <th>Cantidad física</th>
+                            <th>Diferencia</th>
+                            <th>Estado</th>
+                            <th>Contado por</th>
+                            <th>Fecha de conteo</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaResumen">
+                        <tr><td colspan="12" class="texto-vacio">Cargando datos...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="pie-tabla">
+                <span id="cantidadFilasResumen">0 registros</span>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- VISTA IMPORTAR -->
+    <section id="vista-importar" class="vista">
+
+        <div class="panel">
+            <h2>Importar nuevo archivo CSV</h2>
+
+            <p style="line-height:1.7; margin-bottom:16px;">
+                Seleccioná el archivo CSV actualizado con las piezas y el stock
+                del sistema. La importación reemplazará la base de datos actual.
+            </p>
+
+            <div class="campo" style="max-width:600px; margin-bottom:16px;">
+                <label for="archivoCSV">Archivo CSV</label>
+                <input type="file" id="archivoCSV" accept=".csv,text/csv">
+            </div>
+
+            <button class="btn-verde" id="btnImportar" onclick="importarCSV()">
+                Importar archivo y reemplazar todo
+            </button>
+
+            <div class="separador"></div>
+
+            <h3>Qué ocurrirá al importar</h3>
+
+            <ul style="padding-left:22px; line-height:1.9; font-size:14px;">
+                <li>Se borrarán todos los movimientos de conteo.</li>
+                <li>Se borrarán todos los conteos y las cantidades físicas.</li>
+                <li>Se eliminarán todos los inventarios anteriores.</li>
+                <li>Se eliminarán todas las piezas actuales.</li>
+                <li>Se cargarán las piezas del nuevo CSV.</li>
+            </ul>
+
+            <p class="texto-ayuda">
+                Atención: esta operación elimina el historial de inventarios y no se
+                puede deshacer. Si la conexión falla durante el proceso, la carga puede
+                quedar incompleta. No cierres la página mientras se está importando.
+            </p>
+
+            <div id="resultadoImportacion" class="texto-ayuda"></div>
+        </div>
+
+    </section>
+
+    <!-- HISTORIAL DE INVENTARIOS -->
+    <section id="panelInventarios" class="panel oculto">
+        <div class="fila" style="justify-content:space-between; align-items:center;">
+            <h2>Historial de inventarios</h2>
+            <button class="btn-gris" onclick="cerrarHistorial()">Cerrar</button>
+        </div>
+
+        <div class="tabla-contenedor">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Inventario</th>
+                        <th>Estado</th>
+                        <th>Fecha de inicio</th>
+                        <th>Fecha de cierre</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaInventarios"></tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<script>
+/* =========================================================
+   CONFIGURACIÓN DE SUPABASE
+   ========================================================= */
+
+const SUPABASE_URL = "https://zjimmzyyiwbolufaxvwr.supabase.co";
+const SUPABASE_KEY = "sb_publishable_kme-T9tkl1DdfBIVoNl-OA_0LTR23Cs";
+
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* =========================================================
+   VARIABLES
+   ========================================================= */
+
+let piezas = [];
+let inventarios = [];
+let conteos = [];
+let movimientos = [];
+let inventarioActual = "";
+let mensajeTimer = null;
+let importando = false;
+
+/* =========================================================
+   FUNCIONES GENERALES
+   ========================================================= */
+
+const $ = id => document.getElementById(id);
+
+function escapar(valor) {
+    return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[caracter]);
+}
+
+function numero(valor) {
+    if (valor === null || valor === undefined || valor === "") {
+        return null;
+    }
+
+    if (typeof valor === "number") {
+        return Number.isFinite(valor) ? valor : null;
+    }
+
+    let texto = String(valor).trim().replace(/\s/g, "");
+
+    if (!texto) return null;
+
+    // Admite números con coma decimal o punto decimal.
+    if (texto.includes(",") && texto.includes(".")) {
+        if (texto.lastIndexOf(",") > texto.lastIndexOf(".")) {
+            texto = texto.replace(/\./g, "").replace(",", ".");
+        } else {
+            texto = texto.replace(/,/g, "");
+        }
+    } else if (texto.includes(",")) {
+        texto = texto.replace(",", ".");
+    }
+
+    const resultado = Number(texto);
+    return Number.isFinite(resultado) ? resultado : null;
+}
+
+function formatoFecha(fecha) {
+    if (!fecha) return "—";
+
+    const d = new Date(fecha);
+
+    if (Number.isNaN(d.getTime())) return String(fecha);
+
+    return d.toLocaleString("es-AR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+}
+
+function mensaje(texto, tipo = "info") {
+    const elemento = $("mensaje");
+
+    elemento.textContent = texto;
+    elemento.className = "mensaje visible " + tipo;
+
+    clearTimeout(mensajeTimer);
+
+    mensajeTimer = setTimeout(() => {
+        elemento.classList.remove("visible");
+    }, 9000);
+}
+
+function estadoConexion(texto) {
+    $("estadoConexion").textContent = texto;
+}
+
+function mostrarVista(nombre) {
+    document.querySelectorAll(".vista").forEach(vista => {
+        vista.classList.remove("activa");
+    });
+
+    document.querySelectorAll(".pestana").forEach(boton => {
+        boton.classList.toggle("activa", boton.dataset.vista === nombre);
+    });
+
+    $("vista-" + nombre).classList.add("activa");
+
+    if (nombre === "resumen") renderResumen();
+    if (nombre === "relevamiento") renderRelevamiento();
+}
+
+function estadoTexto(estado) {
+    if (estado === "contado") return "Contado";
+    if (estado === "revisar") return "Con diferencia";
+    return "Pendiente";
+}
+
+function claseEstado(estado) {
+    if (estado === "contado") return "estado-ok";
+    if (estado === "revisar") return "estado-revisar";
+    return "estado-pendiente";
+}
+
+function estadoPieza(pieza) {
+    const conteo = conteos.find(c =>
+        c.pieza_id === pieza.id &&
+        String(c.inventario_id) === String(inventarioActual)
+    );
+
+    if (!conteo || conteo.estado === "pendiente") {
+        return "pendiente";
+    }
+
+    if (conteo.estado === "revisar") {
+        return "revisar";
+    }
+
+    return "contado";
+}
+
+function conteoPieza(piezaId) {
+    return conteos.find(c =>
+        c.pieza_id === piezaId &&
+        String(c.inventario_id) === String(inventarioActual)
+    ) || null;
+}
+
+function diferenciaPieza(pieza, conteo) {
+    if (!conteo || conteo.cantidad_fisica === null ||
+        conteo.cantidad_fisica === undefined) {
+        return null;
+    }
+
+    return Number(conteo.cantidad_fisica) -
+        Number(pieza.quantidade_armazenada ?? 0);
+}
+
+/* =========================================================
+   CARGA DE DATOS
+   ========================================================= */
+
+async function cargarTodo() {
+    estadoConexion("Actualizando datos...");
+
+    try {
+        const [resPiezas, resInventarios, resConteos, resMovimientos] =
+            await Promise.all([
+                db.from("piezas").select("*").order("cim"),
+                db.from("inventarios").select("*").order("fecha_inicio", { ascending: false }),
+                db.from("conteos").select("*"),
+                db.from("movimientos_conteo").select("*")
+            ]);
+
+        if (resPiezas.error) throw resPiezas.error;
+        if (resInventarios.error) throw resInventarios.error;
+        if (resConteos.error) throw resConteos.error;
+        if (resMovimientos.error) throw resMovimientos.error;
+
+        piezas = resPiezas.data || [];
+        inventarios = resInventarios.data || [];
+        conteos = resConteos.data || [];
+        movimientos = resMovimientos.data || [];
+
+        if (!inventarios.some(i => String(i.id) === String(inventarioActual))) {
+            inventarioActual = "";
+        }
+
+        if (!inventarioActual) {
+            const abierto = inventarios.find(i => i.estado === "abierto");
+            if (abierto) inventarioActual = String(abierto.id);
+        }
+
+        actualizarSelectorInventarios();
+        actualizarLocales();
+        renderRelevamiento();
+        renderResumen();
+
+        estadoConexion("Conectado · Actualización " +
+            new Date().toLocaleTimeString("es-AR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit"
+            }));
+
+        return true;
+
+    } catch (err) {
+        console.error(err);
+        estadoConexion("Error de conexión");
+        mensaje("No se pudieron cargar los datos: " + (err.message || err), "error");
+        return false;
+    }
+}
+
+function actualizarSelectorInventarios() {
+    const selector = $("inventarioSelect");
+
+    selector.innerHTML = "";
+
+    if (!inventarios.length) {
+        selector.innerHTML = '<option value="">No hay inventarios</option>';
+        return;
+    }
+
+    selector.innerHTML = '<option value="">Seleccioná un inventario</option>';
+
+    inventarios.forEach(inv => {
+        const opcion = document.createElement("option");
+        opcion.value = String(inv.id);
+        opcion.textContent = inv.nombre + " (" +
+            (inv.estado === "abierto" ? "Abierto" : "Cerrado") + ")";
+        selector.appendChild(opcion);
+    });
+
+    selector.value = inventarioActual || "";
+}
+
+$("inventarioSelect").addEventListener("change", async function() {
+    inventarioActual = this.value;
+    renderRelevamiento();
+    renderResumen();
+});
+
+function actualizarLocales() {
+    const locales = [...new Set(
+        piezas.map(p => String(p.local ?? "").trim()).filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b, "es"));
+
+    $("listaLocales").innerHTML = locales
+        .map(l => `<option value="${escapar(l)}"></option>`).join("");
+
+    $("listaLocalesResumen").innerHTML = locales
+        .map(l => `<option value="${escapar(l)}"></option>`).join("");
+}
+
+/* =========================================================
+   INVENTARIOS: CREAR, ABRIR, CERRAR Y ELIMINAR
+   ========================================================= */
+
+async function nuevoInventario() {
+    const nombre = prompt("Ingresá un nombre para el nuevo inventario:");
+
+    if (nombre === null) return;
+
+    if (!nombre.trim()) {
+        mensaje("Ingresá un nombre válido.", "error");
+        return;
+    }
+
+    try {
+        const res = await db.from("inventarios").insert({
+            nombre: nombre.trim(),
+            estado: "abierto",
+            fecha_inicio: new Date().toISOString()
+        }).select().single();
+
+        if (res.error) throw res.error;
+
+        inventarioActual = String(res.data.id);
+
+        await cargarTodo();
+
+        mensaje("Inventario creado correctamente.", "exito");
+
+    } catch (err) {
+        console.error(err);
+        mensaje("No se pudo crear el inventario: " + err.message, "error");
+    }
+}
+
+function verInventarios() {
+    $("panelInventarios").classList.remove("oculto");
+    renderInventarios();
+    $("panelInventarios").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function cerrarHistorial() {
+    $("panelInventarios").classList.add("oculto");
+}
+
+function renderInventarios() {
+    const tbody = $("tablaInventarios");
+
+    if (!inventarios.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="texto-vacio">No hay inventarios.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = inventarios.map(inv => `
+        <tr>
+            <td>${escapar(inv.nombre)}</td>
+            <td>
+                <span class="estado ${inv.estado === "abierto" ? "estado-abierto" : "estado-cerrado"}">
+                    ${inv.estado === "abierto" ? "Abierto" : "Cerrado"}
+                </span>
+            </td>
+            <td>${escapar(formatoFecha(inv.fecha_inicio))}</td>
+            <td>${escapar(formatoFecha(inv.fecha_cierre))}</td>
+            <td>
+                <button class="btn-azul btn-pequeno"
+                    onclick="seleccionarInventario('${inv.id}')">
+                    Abrir
+                </button>
+                ${inv.estado === "abierto" ? `
+                    <button class="btn-amarillo btn-pequeno"
+                        onclick="cerrarInventario('${inv.id}')">
+                        Cerrar
+                    </button>
+                ` : ""}
+                <button class="btn-rojo btn-pequeno"
+                    onclick="eliminarInventario('${inv.id}')">
+                    Eliminar
+                </button>
+            </td>
+        </tr>
+    `).join("");
+}
+
+async function seleccionarInventario(id) {
+    inventarioActual = String(id);
+    await cargarTodo();
+    mensaje("Inventario seleccionado.", "exito");
+    $("panelInventarios").classList.add("oculto");
+    mostrarVista("relevamiento");
+}
+
+async function cerrarInventario(id) {
+    if (!confirm("¿Querés cerrar este inventario?")) return;
+
+    try {
+        const res = await db.from("inventarios")
+            .update({
+                estado: "cerrado",
+                fecha_cierre: new Date().toISOString()
+            })
+            .eq("id", id);
+
+        if (res.error) throw res.error;
+
+        await cargarTodo();
+        renderInventarios();
+        mensaje("Inventario cerrado.", "exito");
+
+    } catch (err) {
+        console.error(err);
+        mensaje("No se pudo cerrar el inventario: " + err.message, "error");
+    }
+}
+
+async function eliminarInventario(id) {
+    const inv = inventarios.find(i => String(i.id) === String(id));
+
+    if (!inv) return;
+
+    if (!confirm(
+        '¿Eliminar el inventario "' + inv.nombre +
+        '" y todos sus conteos y movimientos asociados?\n\n' +
+        "Esta acción no se puede deshacer."
+    )) return;
+
+    try {
+        const resConteos = await db.from("conteos")
+            .select("id")
+            .eq("inventario_id", id);
+
+        if (resConteos.error) throw resConteos.error;
+
+        const idsConteos = (resConteos.data || []).map(c => c.id);
+
+        if (idsConteos.length) {
+            const resMovimientos = await db.from("movimientos_conteo")
+                .delete()
+                .in("conteo_id", idsConteos);
+
+            if (resMovimientos.error) throw resMovimientos.error;
+        }
+
+        const resBorrarConteos = await db.from("conteos")
+            .delete()
+            .eq("inventario_id", id);
+
+        if (resBorrarConteos.error) throw resBorrarConteos.error;
+
+        const resBorrarInventario = await db.from("inventarios")
+            .delete()
+            .eq("id", id);
+
+        if (resBorrarInventario.error) throw resBorrarInventario.error;
+
+        if (String(inventarioActual) === String(id)) {
+            inventarioActual = "";
+        }
+
+        await cargarTodo();
+        renderInventarios();
+
+        mensaje("Inventario eliminado.", "exito");
+
+    } catch (err) {
+        console.error(err);
+        mensaje("No se pudo eliminar el inventario: " + err.message, "error");
+    }
+}
+
+/* =========================================================
+   RELEVAMIENTO
+   ========================================================= */
+
+function limpiarFiltrosRelevamiento() {
+    $("buscarRelevamiento").value = "";
+    $("localRelevamiento").value = "";
+    $("estadoRelevamiento").value = "";
+    renderRelevamiento();
+}
+
+function renderRelevamiento() {
+    const tbody = $("tablaRelevamiento");
+
+    const buscar = $("buscarRelevamiento").value.trim().toLowerCase();
+    const local = $("localRelevamiento").value.trim().toLowerCase();
+    const estadoFiltro = $("estadoRelevamiento").value;
+
+    $("kpiPiezas").textContent = piezas.length;
+
+    const piezasContadas = piezas.filter(p => {
+        const c = conteoPieza(p.id);
+        return c && c.estado !== "pendiente";
+    });
+
+    const piezasDiferencia = piezas.filter(p => estadoPieza(p) === "revisar");
+
+    $("kpiContados").textContent = piezasContadas.length;
+    $("kpiPendientes").textContent = piezas.length - piezasContadas.length;
+    $("kpiDiferencias").textContent = piezasDiferencia.length;
+
+    if (!inventarioActual) {
+        tbody.innerHTML = '<tr><td colspan="10" class="texto-vacio">Creá o seleccioná un inventario para empezar.</td></tr>';
+        $("cantidadFilasRelevamiento").textContent = "0 piezas";
+        return;
+    }
+
+    const inventario = inventarios.find(i => String(i.id) === String(inventarioActual));
+
+    if (!inventario) {
+        tbody.innerHTML = '<tr><td colspan="10" class="texto-vacio">Seleccioná un inventario válido.</td></tr>';
+        return;
+    }
+
+    if (inventario.estado !== "abierto") {
+        tbody.innerHTML = '<tr><td colspan="10" class="texto-vacio">Este inventario está cerrado. Abrí uno nuevo para realizar conteos.</td></tr>';
+        $("cantidadFilasRelevamiento").textContent = "0 piezas";
+        return;
+    }
+
+    const filtradas = piezas.filter(p => {
+        const texto = [
+            p.cim, p.desenho, p.descricao, p.codigo_remito,
+            p.id_gafer, p.area, p.local
+        ].join(" ").toLowerCase();
+
+        if (buscar && !texto.includes(buscar)) return false;
+        if (local && String(p.local ?? "").toLowerCase() !== local) return false;
+
+        if (estadoFiltro && estadoPieza(p) !== estadoFiltro) return false;
+
+        return true;
+    });
+
+    if (!filtradas.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="texto-vacio">No se encontraron piezas.</td></tr>';
+        $("cantidadFilasRelevamiento").textContent = "0 piezas";
+        return;
+    }
+
+    tbody.innerHTML = filtradas.map(p => {
+        const c = conteoPieza(p.id);
+        const estado = estadoPieza(p);
+        const fisica = c && c.cantidad_fisica !== null ? c.cantidad_fisica : "";
+        const diferencia = diferenciaPieza(p, c);
+        const diferenciaTexto = diferencia === null ? "—" : diferencia;
+        const observaciones = c?.observaciones || "";
+
+        return `
+            <tr>
+                <td>${escapar(p.cim)}</td>
+                <td>${escapar(p.desenho)}</td>
+                <td>${escapar(p.descricao)}</td>
+                <td>${escapar(p.local)}</td>
+                <td>${escapar(p.quantidade_armazenada ?? 0)}</td>
+                <td>
+                    <input type="number" step="any" min="0"
+                        id="fisica-${p.id}"
+                        value="${escapar(fisica)}"
+                        placeholder="Cantidad">
+                </td>
+                <td>${escapar(diferenciaTexto)}</td>
+                <td><span class="estado ${claseEstado(estado)}">${estadoTexto(estado)}</span></td>
+                <td>
+                    <input type="text" id="obs-${p.id}"
+                        value="${escapar(observaciones)}"
+                        placeholder="Observaciones">
+                </td>
+                <td>
+                    <button class="btn-azul btn-pequeno"
+                        onclick="guardarConteo('${p.id}')">
+                        Guardar
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join("");
+
+    $("cantidadFilasRelevamiento").textContent =
+        filtradas.length + " piezas mostradas";
+}
+
+async function guardarConteo(piezaId) {
+    if (!inventarioActual) {
+        return mensaje("Primero seleccioná un inventario.", "error");
+    }
+
+    const inventario = inventarios.find(i => String(i.id) === String(inventarioActual));
+
+    if (!inventario || inventario.estado !== "abierto") {
+        return mensaje("El inventario no está abierto.", "error");
+    }
+
+    const pieza = piezas.find(p => String(p.id) === String(piezaId));
+
+    if (!pieza) {
+        return mensaje("No se encontró la pieza.", "error");
+    }
+
+    const campoCantidad = $("fisica-" + piezaId);
+    const campoObs = $("obs-" + piezaId);
+
+    const cantidadTexto = campoCantidad.value.trim();
+
+    if (!cantidadTexto) {
+        return mensaje("Ingresá la cantidad física antes de guardar.", "error");
+    }
+
+    const cantidad = numero(cantidadTexto);
+
+    if (cantidad === null || cantidad < 0) {
+        return mensaje("Ingresá una cantidad válida mayor o igual a cero.", "error");
+    }
+
+    const diferencia = cantidad - Number(pieza.quantidade_armazenada ?? 0);
+    const estado = diferencia === 0 ? "contado" : "revisar";
+
+    try {
+        const anterior = conteoPieza(pieza.id);
+
+        const datos = {
+            inventario_id: inventarioActual,
+            pieza_id: pieza.id,
+            cantidad_fisica: cantidad,
+            estado: estado,
+            contado_por: anterior?.contado_por || "Operario",
+            fecha_conteo: new Date().toISOString(),
+            observaciones: campoObs.value.trim()
+        };
+
+        const res = await db.from("conteos")
+            .upsert(datos, { onConflict: "inventario_id,pieza_id" })
+            .select()
+            .single();
+
+        if (res.error) throw res.error;
+
+        const resMovimiento = await db.from("movimientos_conteo")
+            .insert({
+                conteo_id: res.data.id,
+                cantidad: cantidad,
+                usuario: datos.contado_por,
+                fecha: new Date().toISOString()
+            });
+
+        if (resMovimiento.error) throw resMovimiento.error;
+
+        const idx = conteos.findIndex(c =>
+            String(c.inventario_id) === String(inventarioActual) &&
+            String(c.pieza_id) === String(pieza.id)
+        );
+
+        if (idx >= 0) {
+            conteos[idx] = res.data;
+        } else {
+            conteos.push(res.data);
+        }
+
+        movimientos.push({
+            conteo_id: res.data.id,
+            cantidad: cantidad,
+            usuario: datos.contado_por,
+            fecha: new Date().toISOString()
+        });
+
+        renderRelevamiento();
+        renderResumen();
+
+        mensaje(
+            "Conteo guardado para CIM " + pieza.cim +
+            ". Diferencia: " + diferencia + ".",
+            "exito"
+        );
+
+    } catch (err) {
+        console.error(err);
+        mensaje("No se pudo guardar el conteo: " + err.message, "error");
+    }
+}
+
+/* =========================================================
+   RESUMEN DEL RELEVAMIENTO
+   ========================================================= */
+
+function limpiarFiltrosResumen() {
+    $("buscarResumen").value = "";
+    $("localResumen").value = "";
+    $("estadoResumen").value = "";
+    renderResumen();
+}
+
+function datosResumenFiltrados() {
+    const buscar = $("buscarResumen").value.trim().toLowerCase();
+    const local = $("localResumen").value.trim().toLowerCase();
+    const estadoFiltro = $("estadoResumen").value;
+
+    return piezas.filter(p => {
+        const texto = [
+            p.cim, p.desenho, p.descricao, p.codigo_remito,
+            p.id_gafer, p.area, p.local
+        ].join(" ").toLowerCase();
+
+        if (buscar && !texto.includes(buscar)) return false;
+        if (local && String(p.local ?? "").toLowerCase() !== local) return false;
+        if (estadoFiltro && estadoPieza(p) !== estadoFiltro) return false;
+
+        return true;
+    });
+}
+
+function renderResumen() {
+    const tbody = $("tablaResumen");
+
+    if (!inventarioActual) {
+        tbody.innerHTML = '<tr><td colspan="12" class="texto-vacio">Seleccioná un inventario para ver el resumen.</td></tr>';
+
+        $("resTotal").textContent = piezas.length;
+        $("resContadas").textContent = "0";
+        $("resPendientes").textContent = piezas.length;
+        $("resDiferencias").textContent = "0";
+        $("cantidadFilasResumen").textContent = "0 registros";
+        return;
+    }
+
+    const filtradas = datosResumenFiltrados();
+
+    const contadas = filtradas.filter(p => {
+        const c = conteoPieza(p.id);
+        return c && c.estado !== "pendiente";
+    });
+
+    const diferencias = filtradas.filter(p => estadoPieza(p) === "revisar");
+
+    $("resTotal").textContent = filtradas.length;
+    $("resContadas").textContent = contadas.length;
+    $("resPendientes").textContent = filtradas.length - contadas.length;
+    $("resDiferencias").textContent = diferencias.length;
+
+    if (!filtradas.length) {
+        tbody.innerHTML = '<tr><td colspan="12" class="texto-vacio">No hay resultados para los filtros seleccionados.</td></tr>';
+        $("cantidadFilasResumen").textContent = "0 registros";
+        return;
+    }
+
+    tbody.innerHTML = filtradas.map(p => {
+        const c = conteoPieza(p.id);
+        const estado = estadoPieza(p);
+        const diferencia = diferenciaPieza(p, c);
+
+        return `
+            <tr>
+                <td>${escapar(p.cim)}</td>
+                <td>${escapar(p.desenho)}</td>
+                <td>${escapar(p.descricao)}</td>
+                <td>${escapar(p.area)}</td>
+                <td>${escapar(p.local)}</td>
+                <td>${escapar(p.quantidade_armazenada ?? 0)}</td>
+                <td>${c && c.cantidad_fisica !== null ? escapar(c.cantidad_fisica) : "—"}</td>
+                <td>${diferencia === null ? "—" : escapar(diferencia)}</td>
+                <td><span class="estado ${claseEstado(estado)}">${estadoTexto(estado)}</span></td>
+                <td>${escapar(c?.contado_por || "—")}</td>
+                <td>${escapar(formatoFecha(c?.fecha_conteo))}</td>
+                <td>${escapar(c?.observaciones || "—")}</td>
+            </tr>
+        `;
+    }).join("");
+
+    $("cantidadFilasResumen").textContent =
+        filtradas.length + " registros";
+}
+
+function exportarResumen() {
+    if (!inventarioActual) {
+        return mensaje("Seleccioná un inventario antes de exportar.", "error");
+    }
+
+    const datos = datosResumenFiltrados();
+
+    const encabezados = [
+        "CIM", "Desenho", "Descrição", "Área", "Local",
+        "Stock sistema", "Cantidad física", "Diferencia",
+        "Estado", "Contado por", "Fecha de conteo", "Observaciones"
+    ];
+
+    const filas = datos.map(p => {
+        const c = conteoPieza(p.id);
+        const diferencia = diferenciaPieza(p, c);
+
+        return [
+            p.cim,
+            p.desenho,
+            p.descricao,
+            p.area,
+            p.local,
+            p.quantidade_armazenada ?? 0,
+            c?.cantidad_fisica ?? "",
+            diferencia ?? "",
+            estadoTexto(estadoPieza(p)),
+            c?.contado_por || "",
+            c?.fecha_conteo || "",
+            c?.observaciones || ""
+        ];
+    });
+
+    descargarCSV(encabezados, filas, "resumen_inventario.csv");
+
+    mensaje("Resumen exportado correctamente.", "exito");
+}
+
+/* =========================================================
+   IMPORTACIÓN CSV: REEMPLAZO COMPLETO DE LOS DATOS
+   ========================================================= */
+
+function normalizarCabecera(valor) {
+    return String(valor ?? "")
+        .replace(/^\uFEFF/, "")
+        .trim()
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, " ");
+}
+
+/*
+ * Parser CSV compatible con comillas, comas, punto y coma
+ * y tabulaciones. Se determina el separador usando la primera
+ * línea del archivo.
+ */
+function parseCSV(texto) {
+    texto = texto.replace(/^\uFEFF/, "");
+
+    const primeraLinea = texto.split(/\r?\n/)[0] || "";
+    const separadores = [",", ";", "\t"];
+
+    let separador = ",";
+    let maxSeparadores = -1;
+
+    for (const candidato of separadores) {
+        let cantidad = 0;
+        let entreComillas = false;
+
+        for (let i = 0; i < primeraLinea.length; i++) {
+            const caracter = primeraLinea[i];
+
+            if (caracter === '"') {
+                if (entreComillas && primeraLinea[i + 1] === '"') {
+                    i++;
+                } else {
+                    entreComillas = !entreComillas;
+                }
+            } else if (caracter === candidato && !entreComillas) {
+                cantidad++;
+            }
+        }
+
+        if (cantidad > maxSeparadores) {
+            maxSeparadores = cantidad;
+            separador = candidato;
+        }
+    }
+
+    const filas = [];
+    let fila = [];
+    let celda = "";
+    let entreComillas = false;
+
+    for (let i = 0; i < texto.length; i++) {
+        const caracter = texto[i];
+
+        if (caracter === '"') {
+            if (entreComillas && texto[i + 1] === '"') {
+                celda += '"';
+                i++;
+            } else {
+                entreComillas = !entreComillas;
+            }
+        } else if (caracter === separador && !entreComillas) {
+            fila.push(celda);
+            celda = "";
+        } else if ((caracter === "\n" || caracter === "\r") && !entreComillas) {
+            if (caracter === "\r" && texto[i + 1] === "\n") i++;
+
+            fila.push(celda);
+
+            if (fila.some(valor => String(valor).trim() !== "")) {
+                filas.push(fila);
+            }
+
+            fila = [];
+            celda = "";
+        } else {
+            celda += caracter;
+        }
+    }
+
+    fila.push(celda);
+
+    if (fila.some(valor => String(valor).trim() !== "")) {
+        filas.push(fila);
+    }
+
+    return filas;
+}
+
+async function importarCSV() {
+    if (importando) return;
+
+    const archivo = $("archivoCSV").files[0];
+
+    if (!archivo) {
+        return mensaje("Seleccioná un archivo CSV primero.", "error");
+    }
+
+    const boton = $("btnImportar");
+    const resultado = $("resultadoImportacion");
+
+    try {
+        importando = true;
+        boton.disabled = true;
+        boton.textContent = "Validando archivo...";
+        resultado.textContent = "";
+
+        // 1. Leer y validar antes de borrar datos
+        const filas = parseCSV(await archivo.text());
+
+        if (filas.length < 2) {
+            throw new Error("El CSV no contiene filas de datos.");
+        }
+
+        const cab = filas[0].map(normalizarCabecera);
+
+        const indice = (...nombres) =>
+            cab.findIndex(c =>
+                nombres.some(n => c === normalizarCabecera(n))
+            );
+
+        const col = {
+            cim: indice("CIM"),
+            desenho: indice("Desenho", "Diseño", "Diseno"),
+            descricao: indice("Descrição", "Descripcion", "Descripción"),
+            codigo_remito: indice("Código Remito", "Codigo Remito"),
+            id_gafer: indice("ID Gafer"),
+            quantidade_armazenada: indice(
+                "Quantidade Armazenada",
+                "Cantidad Almacenada",
+                "Stock"
+            ),
+            area: indice("Área", "Area"),
+            local: indice("Local"),
+            data_alocacao: indice(
+                "Data Alocação",
+                "Data Alocacao",
+                "Fecha Asignacion"
+            )
+        };
+
+        if (col.cim < 0) {
+            throw new Error("No se encontró la columna CIM.");
+        }
+
+        if (col.quantidade_armazenada < 0) {
+            throw new Error("No se encontró la columna de stock.");
+        }
+
+        if (col.local < 0) {
+            throw new Error("No se encontró la columna Local.");
+        }
+
+        // 2. Preparar todas las piezas en memoria
+        const piezasNuevas = [];
+
+        for (const fila of filas.slice(1)) {
+            const valor = i =>
+                i < 0 ? null : (fila[i] ?? "").trim();
+
+            const cim = valor(col.cim);
+
+            if (!cim) continue;
+
+            const stockTexto = valor(col.quantidade_armazenada);
+            const stock = numero(stockTexto);
+
+            if (stock === null || stock < 0) {
+                throw new Error(
+                    "El CIM " + cim +
+                    " tiene un stock vacío o inválido. Corregí el CSV antes de importar."
+                );
+            }
+
+            const datos = {
+                cim: cim,
+                desenho: valor(col.desenho),
+                descricao: valor(col.descricao),
+                codigo_remito: valor(col.codigo_remito),
+                id_gafer: valor(col.id_gafer),
+                quantidade_armazenada: stock,
+                area: valor(col.area),
+                local: valor(col.local),
+                data_alocacao: valor(col.data_alocacao),
+                fecha_importacion: new Date().toISOString()
+            };
+
+            Object.keys(datos).forEach(k => {
+                if (datos[k] === null) delete datos[k];
+            });
+
+            piezasNuevas.push(datos);
+        }
+
+        if (piezasNuevas.length === 0) {
+            throw new Error("El CSV no contiene piezas válidas.");
+        }
+
+        // Evitar CIM repetidos dentro del nuevo archivo
+        const cims = piezasNuevas.map(p => String(p.cim).trim());
+
+        if (new Set(cims).size !== cims.length) {
+            throw new Error(
+                "El CSV tiene CIM repetidos. Corregí el archivo antes de importarlo."
+            );
+        }
+
+        // 3. Confirmar antes de eliminar
+        const confirmar = confirm(
+            "ATENCIÓN: SE BORRARÁ TODO EL INVENTARIO ANTERIOR.\n\n" +
+            "Se eliminarán:\n" +
+            "- Todos los movimientos de conteo\n" +
+            "- Todos los conteos y cantidades físicas\n" +
+            "- Todos los inventarios anteriores\n" +
+            "- Todas las piezas actuales\n\n" +
+            "Después se cargarán " + piezasNuevas.length +
+            " piezas del nuevo CSV.\n\n" +
+            "Esta acción no se puede deshacer.\n\n" +
+            "¿Querés continuar?"
+        );
+
+        if (!confirmar) {
+            mensaje("Importación cancelada. No se modificaron los datos.", "info");
+            return;
+        }
+
+        boton.textContent = "Eliminando datos anteriores...";
+        resultado.textContent = "No cierres esta página mientras se completa la importación.";
+
+        // 4. Borrar todos los movimientos
+        let res = await db.from("movimientos_conteo")
+            .delete()
+            .not("id", "is", null);
+
+        if (res.error) {
+            throw new Error("No se pudieron borrar los movimientos: " + res.error.message);
+        }
+
+        // 5. Borrar todos los conteos
+        res = await db.from("conteos")
+            .delete()
+            .not("id", "is", null);
+
+        if (res.error) {
+            throw new Error("No se pudieron borrar los conteos: " + res.error.message);
+        }
+
+        // 6. Borrar todos los inventarios
+        res = await db.from("inventarios")
+            .delete()
+            .not("id", "is", null);
+
+        if (res.error) {
+            throw new Error("No se pudieron borrar los inventarios: " + res.error.message);
+        }
+
+        // 7. Borrar todas las piezas anteriores
+        res = await db.from("piezas")
+            .delete()
+            .not("id", "is", null);
+
+        if (res.error) {
+            throw new Error("No se pudieron borrar las piezas: " + res.error.message);
+        }
+
+        // 8. Cargar las nuevas piezas en lotes de 500
+        const lote = 500;
+
+        for (let i = 0; i < piezasNuevas.length; i += lote) {
+            boton.textContent =
+                "Cargando piezas " + Math.min(i + lote, piezasNuevas.length) +
+                " de " + piezasNuevas.length + "...";
+
+            const grupo = piezasNuevas.slice(i, i + lote);
+
+            res = await db.from("piezas").insert(grupo);
+
+            if (res.error) {
+                throw new Error(
+                    "Error cargando el lote " +
+                    (Math.floor(i / lote) + 1) +
+                    ": " + res.error.message +
+                    "\nLa base podría haber quedado parcialmente cargada."
+                );
+            }
+        }
+
+        // 9. Volver a cargar datos y dejar sin inventario seleccionado
+        inventarioActual = "";
+
+        await cargarTodo();
+
+        $("archivoCSV").value = "";
+
+        resultado.textContent =
+            "Importación completada: " + piezasNuevas.length +
+            " piezas cargadas. Los inventarios anteriores fueron eliminados.";
+
+        mensaje(
+            "¡Importación completada! Se cargaron " +
+            piezasNuevas.length +
+            " piezas. Todo el inventario anterior fue eliminado.",
+            "exito"
+        );
+
+    } catch (err) {
+        console.error(err);
+
+        resultado.textContent = "Error: " + (err.message || err);
+
+        mensaje(
+            "Error al importar CSV: " + (err.message || err),
+            "error"
+        );
+
+    } finally {
+        importando = false;
+        boton.disabled = false;
+        boton.textContent = "Importar archivo y reemplazar todo";
+    }
+}
+
+/* =========================================================
+   EXPORTACIÓN CSV
+   ========================================================= */
+
+function descargarCSV(encabezados, filas, nombreArchivo) {
+    const escaparCSV = valor => {
+        const texto = String(valor ?? "");
+        return '"' + texto.replace(/"/g, '""') + '"';
+    };
+
+    const contenido = [
+        encabezados.map(escaparCSV).join(";"),
+        ...filas.map(fila => fila.map(escaparCSV).join(";"))
+    ].join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + contenido], {
+        type: "text/csv;charset=utf-8;"
+    });
+
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement("a");
+
+    enlace.href = url;
+    enlace.download = nombreArchivo;
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+
+    URL.revokeObjectURL(url);
+}
+
+/* =========================================================
+   ACTUALIZACIÓN AUTOMÁTICA
+   ========================================================= */
+
+let actualizacionEnCurso = false;
+
+async function actualizarPeriodicamente() {
+    if (actualizacionEnCurso || importando) return;
+
+    actualizacionEnCurso = true;
+
+    try {
+        await cargarTodo();
+    } finally {
+        actualizacionEnCurso = false;
+    }
+}
+
+async function iniciarSistema() {
+    try {
+        await cargarTodo();
+
+        estadoConexion("Conectado");
+    } catch (err) {
+        console.error(err);
+        estadoConexion("Error de conexión");
+    }
+
+    // Actualiza la información compartida cada 30 segundos.
+    setInterval(actualizarPeriodicamente, 30000);
+}
+
+iniciarSistema();
+</script>
+
+</body>
+</html>
